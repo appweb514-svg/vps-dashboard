@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./*"],
+      "@benchmark/*": ["./benchmark/*"]
+    }
+  },
+  "include": ["benchmark/**/*", "api/**/*", "dashboard/**/*"],
+  "exclude": ["node_modules", "dist", "dashboard/.next"]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "model": "Qwen 3.8 Flash",
+    "provider": "Alibaba",
+    "globalScore": 92,
+    "passRate": 95,
+    "categories": { "security": 70, "adversarial": 95, "bias": 92, "comprehension": 100, "logic": 95, "instruction_reliability": 98, "code": 93, "ui_generation": 94 },
+    "costPer1kTokens": { "input": 0.00015, "output": 0.00047 },
+    "contextWindow": 1000000
+  },
+  {
+    "model": "GPT-5.6",
+    "provider": "OpenAI",
+    "globalScore": 96,
+    "passRate": 98,
+    "categories": { "security": 92, "adversarial": 96, "bias": 95, "comprehension": 98, "logic": 97, "instruction_reliability": 98, "code": 97, "ui_generation": 95 },
+    "costPer1kTokens": { "input": 0.005, "output": 0.015 },
+    "contextWindow": 400000
+  },
+  {
+    "model": "Claude Opus 4.5",
+    "provider": "Anthropic",
+    "globalScore": 94,
+    "passRate": 96,
+    "categories": { "security": 88, "adversarial": 93, "bias": 96, "comprehension": 97, "logic": 95, "instruction_reliability": 96, "code": 95, "ui_generation": 92 },
+    "costPer1kTokens": { "input": 0.015, "output": 0.075 },
+    "contextWindow": 200000
+  },
+  {
+    "model": "Gemini 2.5 Pro",
+    "provider": "Google",
+    "globalScore": 90,
+    "passRate": 92,
+    "categories": { "security": 85, "adversarial": 90, "bias": 88, "comprehension": 95, "logic": 92, "instruction_reliability": 91, "code": 90, "ui_generation": 90 },
+    "costPer1kTokens": { "input": 0.00125, "output": 0.01 },
+    "contextWindow": 2000000
+  },
+  {
+    "model": "Llama 4 400B",
+    "provider": "Meta",
+    "globalScore": 84,
+    "passRate": 86,
+    "categories": { "security": 72, "adversarial": 80, "bias": 85, "comprehension": 88, "logic": 86, "instruction_reliability": 85, "code": 84, "ui_generation": 86 },
+    "costPer1kTokens": { "input": 0.0006, "output": 0.0018 },
+    "contextWindow": 128000
+  }
+]
