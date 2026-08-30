@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import { runBenchmark } from "../benchmark/runner/runner.ts";
 import { withRanking } from "../benchmark/report/generator.ts";
 import baselines from "../data/baselines.json" with { type: "json" };
-import { readFileSync, existsSync, readdirSync } from "fs";
+import { readFileSync, existsSync, readdirSync, statfsSync } from "fs";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
@@ -13,6 +13,26 @@ const runs = new Map<string, any>();
 const sseClients = new Map<string, Set<any>>();
 
 app.get("/api/health", async () => ({ ok: true }));
+
+function cpuTimes() {
+  const parts = readFileSync("/proc/stat", "utf8").split("\n")[0].trim().split(/\s+/).slice(1).map(Number);
+  return { idle: parts[3] + (parts[4] || 0), total: parts.reduce((s, v) => s + v, 0) };
+}
+
+app.get("/api/system", async () => {
+  const a = cpuTimes();
+  await new Promise(r => setTimeout(r, 250));
+  const b = cpuTimes();
+  const cpuPct = Math.max(0, Math.min(100, Math.round(100 * (1 - (b.idle - a.idle) / Math.max(1, b.total - a.total)))));
+  const mem = readFileSync("/proc/meminfo", "utf8");
+  const num = (k: string) => Number(mem.match(new RegExp(`^${k}:\\s+(\\d+)`, "m"))?.[1] ?? 0);
+  const ramTotalGb = +(num("MemTotal") / 1048576).toFixed(1);
+  const ramAvailGb = +(num("MemAvailable") / 1048576).toFixed(1);
+  const st = statfsSync("/");
+  const diskTotalGb = +((st.blocks * st.bsize) / 1024 ** 3).toFixed(0);
+  const diskFreeGb = +((st.bavail * st.bsize) / 1024 ** 3).toFixed(0);
+  return { cpuPct, ramUsedGb: +(ramTotalGb - ramAvailGb).toFixed(1), ramTotalGb, diskUsedGb: diskTotalGb - diskFreeGb, diskTotalGb };
+});
 app.get("/api/baselines", async () => baselines);
 app.get("/api/benchmark/suites", async () => {
   const { SUITES } = await import("../benchmark/suites/index.ts");
