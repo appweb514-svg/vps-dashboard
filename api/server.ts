@@ -1,12 +1,10 @@
 import Fastify from "fastify";
-import cors from "@fastify/cors";
 import { runBenchmark } from "../benchmark/runner/runner.ts";
 import { withRanking } from "../benchmark/report/generator.ts";
 import baselines from "../data/baselines.json" with { type: "json" };
 import { readFileSync, existsSync, readdirSync, statfsSync } from "fs";
 
 const app = Fastify({ logger: true });
-await app.register(cors, { origin: true });
 
 // In-memory run store + SSE clients
 const runs = new Map<string, any>();
@@ -62,22 +60,39 @@ function broadcast(runId: string, payload: any) {
   for (const c of sseClients.get(runId) || []) { try { c.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {} }
 }
 
-app.post("/api/benchmark/run", async (req: any) => {
+const MAX_CONCURRENT_RUNS = 3;
+const MAX_RUNS_PER_HOUR = 10;
+const runStarts: number[] = [];
+let activeRuns = 0;
+
+app.post("/api/benchmark/run", async (req: any, reply) => {
+  const now = Date.now();
+  while (runStarts.length && now - runStarts[0] > 3_600_000) runStarts.shift();
+  if (activeRuns >= MAX_CONCURRENT_RUNS) return reply.code(429).send({ error: `${MAX_CONCURRENT_RUNS} benchmarks déjà en cours` });
+  if (runStarts.length >= MAX_RUNS_PER_HOUR) return reply.code(429).send({ error: `quota de ${MAX_RUNS_PER_HOUR} lancements/heure atteint` });
   const { model = "test-model", apiUrl = process.env.BENCHMARK_API_URL || "http://localhost:11434", apiKey, mock = false } = req.body || {};
   const runId = `run-${Date.now().toString(36)}`;
+  runStarts.push(now);
+  activeRuns++;
   // fire and forget, stream via SSE
   (async () => {
-    const report = await runBenchmark({ name: model, model, apiUrl, apiKey }, {
-      mock, concurrency: 6,
-      onProgress: (done, total, result) => broadcast(runId, { type: "progress", done, total, result, pct: Math.round(done/total*100), etaSec: Math.round((total-done)*(result.latencyMs/1000)) }),
-    });
-    const ranked = withRanking(report, baselines as any);
-    ranked.runId = runId;
-    runs.set(runId, ranked);
-    const { writeFileSync, mkdirSync } = await import("fs");
-    mkdirSync("data/runs", { recursive: true });
-    writeFileSync(`data/runs/${runId}.json`, JSON.stringify(ranked, null, 2));
-    broadcast(runId, { type: "done", report: ranked });
+    try {
+      const report = await runBenchmark({ name: model, model, apiUrl, apiKey }, {
+        mock, concurrency: 6,
+        onProgress: (done, total, result) => broadcast(runId, { type: "progress", done, total, result, pct: Math.round(done/total*100), etaSec: Math.round((total-done)*(result.latencyMs/1000)) }),
+      });
+      const ranked = withRanking(report, baselines as any);
+      ranked.runId = runId;
+      runs.set(runId, ranked);
+      const { writeFileSync, mkdirSync } = await import("fs");
+      mkdirSync("data/runs", { recursive: true });
+      writeFileSync(`data/runs/${runId}.json`, JSON.stringify(ranked, null, 2));
+      broadcast(runId, { type: "done", report: ranked });
+    } catch (err: any) {
+      broadcast(runId, { type: "error", message: err?.message || String(err) });
+    } finally {
+      activeRuns--;
+    }
   })();
   return { runId, status: "started", stream: `/api/benchmark/runs/${runId}/stream` };
 });
