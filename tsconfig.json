@@ -3,6 +3,8 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,6 +18,6 @@
       "@benchmark/*": ["./benchmark/*"]
     }
   },
-  "include": ["benchmark/**/*", "api/**/*", "dashboard/**/*"],
-  "exclude": ["node_modules", "dist", "dashboard/.next"]
+  "include": ["benchmark/**/*", "api/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
