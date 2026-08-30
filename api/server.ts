@@ -63,4 +63,5 @@ app.post("/api/benchmark/run", async (req: any) => {
 });
 
 const port = Number(process.env.PORT || 3001);
-app.listen({ port, host: "0.0.0.0" }).then(()=>console.log(`API on :${port}`));
+const host = process.env.HOST || "127.0.0.1";
+app.listen({ port, host }).then(()=>console.log(`API on ${host}:${port}`));

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function BenchmarkPage() {
   const [model, setModel] = useState("qwen3-8b-flash-mock");
