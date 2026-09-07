@@ -131,7 +131,7 @@ function probe(host: string): Promise<{ status: string; code?: number; latency?:
   return new Promise(resolve => {
     const t0 = Date.now();
     const req = http.request(
-      { host: "10.10.0.13", port: 80, method: "GET", path: "/", headers: { host }, timeout: 2000 },
+      { host: "dokploy-traefik", port: 80, method: "GET", path: "/", headers: { host }, timeout: 2000 },
       res => {
         const code = res.statusCode ?? 0;
         res.resume();
