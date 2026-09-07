@@ -3,6 +3,7 @@ import { runBenchmark } from "../benchmark/runner/runner.ts";
 import { withRanking } from "../benchmark/report/generator.ts";
 import baselines from "../data/baselines.json" with { type: "json" };
 import { readFileSync, existsSync, readdirSync, statfsSync } from "fs";
+import http from "http";
 
 const app = Fastify({ logger: true });
 
@@ -96,6 +97,63 @@ app.post("/api/benchmark/run", async (req: any, reply) => {
   })();
   return { runId, status: "started", stream: `/api/benchmark/runs/${runId}/stream` };
 });
+
+
+// --- Catalogue des services Dokploy (portail PRIVATE) ---
+function fetchServices(): Promise<any[]> {
+  const base = process.env.DOKPLOY_URL || "http://dokploy:3000";
+  const key = process.env.DOKPLOY_API_KEY;
+  if (!key) return Promise.resolve([]);
+  return fetch(`${base}/api/project.all`, { headers: { "x-api-key": key } })
+    .then(r => (r.ok ? r.json() : []))
+    .then((projects: any[]) => {
+      const out: any[] = [];
+      for (const p of projects ?? []) {
+        for (const env of p.environments ?? []) {
+          for (const a of env.applications ?? []) {
+            const host = String(a.name || "").toLowerCase().replace(/[^a-z0-9-]/g, "-");
+            if (!host) continue;
+            out.push({ id: a.applicationId, name: a.name, url: `http://${host}.int.labvirtuel.fr` });
+          }
+          for (const c of env.compose ?? []) {
+            const name = String(c.name || c.appName || "").split("-")[0];
+            if (!name) continue;
+            out.push({ id: c.composeId, name: c.name, url: `http://${name}.int.labvirtuel.fr` });
+          }
+        }
+      }
+      return out;
+    })
+    .catch(() => []);
+}
+
+function probe(host: string): Promise<{ status: string; code?: number; latency?: number }> {
+  return new Promise(resolve => {
+    const t0 = Date.now();
+    const req = http.request(
+      { host: "10.10.0.13", port: 80, method: "GET", path: "/", headers: { host }, timeout: 2000 },
+      res => {
+        const code = res.statusCode ?? 0;
+        res.resume();
+        resolve({ status: code > 0 && code < 400 ? "online" : "degraded", code, latency: Date.now() - t0 });
+      }
+    );
+    req.on("timeout", () => { req.destroy(); resolve({ status: "offline" }); });
+    req.on("error", () => resolve({ status: "offline" }));
+    req.end();
+  });
+}
+
+app.get("/api/status", async () => {
+  const svcs = await fetchServices();
+  return Promise.all(
+    svcs.map(async (s: any) => ({
+      ...s,
+      health: await probe(s.url.replace("http://", "")),
+    }))
+  );
+});
+
 
 const port = Number(process.env.PORT || 3001);
 const host = process.env.HOST || "127.0.0.1";

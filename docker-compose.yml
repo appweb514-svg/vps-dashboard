@@ -13,6 +13,8 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "3001"
+      DOKPLOY_URL: "http://dokploy:3000"
+      DOKPLOY_API_KEY: "${DOKPLOY_API_KEY}"
 
   web:
     build:
@@ -30,7 +32,7 @@ services:
       - traefik.http.routers.portail-web.rule=Host(`portail.int.labvirtuel.fr`)
       - traefik.http.routers.portail-web.entrypoints=web
       - traefik.http.routers.portail-web.middlewares=portail-private
-      - traefik.http.middlewares.portail-private.ipallowlist.sourcerange=10.10.0.0/24
+      - traefik.http.middlewares.portail-private.ipallowlist.sourcerange=10.0.0.0/8
 
 networks:
   dokploy-network:
