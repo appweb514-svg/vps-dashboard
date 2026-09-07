@@ -1,0 +1,33 @@
+# vps-dashboard — déploiement Dokploy — PRIVATE par défaut
+# PRIVATE : portail.int.labvirtuel.fr (DNS NetBird, HTTP, ipAllowList 10.10.0.0/24)
+# PUBLIC  (à la demande) : un fichier dynamic Traefik ajoute le router
+#   portail.apps.labvirtuel.fr -> portail-web:3000 sans rebuild (voir scripts project-mode)
+services:
+  api:
+    build: ./api
+    container_name: portail-api
+    networks: [dokploy-network]
+    restart: unless-stopped
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3001"
+
+  web:
+    build: ./dashboard
+    container_name: portail-web
+    networks: [dokploy-network]
+    depends_on: [api]
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: "http://api:3001"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.portail-web.rule=Host(`portail.int.labvirtuel.fr`)
+      - traefik.http.routers.portail-web.entrypoints=web
+      - traefik.http.routers.portail-web.middlewares=portail-private
+      - traefik.http.middlewares.portail-private.ipallowlist.sourcerange=10.10.0.0/24
+
+networks:
+  dokploy-network:
+    external: true
